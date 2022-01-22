@@ -275,6 +275,38 @@ request = {
 			curl.curl_easy_setopt(handle, curl.CURLOPT_HTTPPOST, post[0])
 		end
 
+		local post_buffer
+		if (args.buffers) then
+			post_buffer = ffi.new("struct curl_httppost*[1]")
+			local lastptr = ffi.new("struct curl_httppost*[1]")
+
+			for key, value in pairs(args.buffers) do
+				local filename = key
+				local data = value
+				if type(value) == "table" then
+					filename = value.filename or key
+					data = value[1] or value.data
+				end
+
+				local data_ptr = ffi.new("char[?]", #data, data)
+				local length = ffi.new("size_t", #data)
+
+				table.insert(gc_handles, data_ptr)
+				table.insert(gc_handles, length)
+
+				local res = curl.curl_formadd(
+					post_buffer, lastptr,
+					ffi.new("int", curl.CURLFORM_COPYNAME), key,
+					ffi.new("int", curl.CURLFORM_BUFFER), filename,
+					ffi.new("int", curl.CURLFORM_BUFFERPTR), data_ptr,
+					ffi.new("int", curl.CURLFORM_BUFFERLENGTH), length,
+					ffi.new("int", curl.CURLFORM_END)
+				)
+			end
+
+			curl.curl_easy_setopt(handle, curl.CURLOPT_HTTPPOST, post_buffer[0])
+		end
+
 		-- Enable the cookie engine
 		curl.curl_easy_setopt(handle, curl.CURLOPT_COOKIEFILE, "")
 
