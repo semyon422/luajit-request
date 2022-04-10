@@ -424,6 +424,4 @@ request = {
 	end
 }
 
-request.init()
-
 return request
