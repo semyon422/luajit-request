@@ -260,7 +260,7 @@ request = {
 			local lastptr = ffi.new("struct curl_httppost*[1]")
 
 			for key, value in pairs(args.files) do
-				local file = ffi.new("char[?]", #value, value)
+				local file = ffi.new("char[?]", #value + 1, value)
 
 				table.insert(gc_handles, file)
 
@@ -288,18 +288,16 @@ request = {
 					data = value[1] or value.data
 				end
 
-				local data_ptr = ffi.new("char[?]", #data, data)
-				local length = ffi.new("size_t", #data)
-
+				local data_ptr = ffi.new("char[?]", #data)
+				ffi.copy(data_ptr, data, #data)
 				table.insert(gc_handles, data_ptr)
-				table.insert(gc_handles, length)
 
 				local res = curl.curl_formadd(
 					post_buffer, lastptr,
 					ffi.new("int", curl.CURLFORM_COPYNAME), key,
 					ffi.new("int", curl.CURLFORM_BUFFER), filename,
 					ffi.new("int", curl.CURLFORM_BUFFERPTR), data_ptr,
-					ffi.new("int", curl.CURLFORM_BUFFERLENGTH), length,
+					ffi.new("int", curl.CURLFORM_BUFFERLENGTH), ffi.new("size_t", #data),
 					ffi.new("int", curl.CURLFORM_END)
 				)
 			end
